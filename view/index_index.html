@@ -73,7 +73,6 @@
       });
     }
 
-    // 用canvas实现压缩-->file转img，canvas读取img，输出压缩后的img，转为file对象
     function compress(options) {
       var { file, quality, width, height, callback } = options;
       var reader = new FileReader();
@@ -93,7 +92,6 @@
           if (width) newImg.width = width;
           if (height) newImg.height = height;
           if (callback) {
-            // 转为 file 对象
             var base64data = newImg.src.replace(`data:${mType};base64,`, "");
             var bs = atob(base64data);
             var buffer = new ArrayBuffer(bs.length);
@@ -110,7 +108,6 @@
       }
       reader.readAsDataURL(file);
     }
-
 
     function log(info) {
       document.querySelectorAll('#log')[0].textContent = info;
