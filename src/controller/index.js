@@ -10,6 +10,7 @@ module.exports = class extends Base {
 
   async uploadAction() {
     const file = this.file('file');
+    console.log(file)
     if(file) {
       try{
         const filePath = path.join(think.ROOT_PATH, `runtime/upload/${Date.now()}${path.extname(file.name)}`);
