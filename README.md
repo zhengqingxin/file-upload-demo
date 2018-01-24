@@ -1,5 +1,5 @@
 
-File upload demo.
+File upload demo based on ThinkJS.
 
 ## Install dependencies
 
