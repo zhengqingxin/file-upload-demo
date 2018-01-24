@@ -23,7 +23,7 @@
   <input id="compressUpload" type="file">
   <br>
   <label>分片上传：</label>
-  <input id="chunkUpload" type="file">
+  <input id="chunkUpload" type="file" multiple>
   <br>
   <p style="color:red;" id="log">等待上传...</p>
   <script src="//lib.baomitu.com/axios/0.17.1/axios.min.js"></script>
@@ -64,8 +64,9 @@
     // 分片上传
     document.querySelectorAll('#chunkUpload')[0].addEventListener('change', function (e) {
       var fileList = e.target.files;
-      var file = fileList[0];
-      chunkUpload(file);
+      Array.from(fileList).forEach(file => {
+        chunkUpload(file);
+      })
     })
 
     // 上传
@@ -140,7 +141,6 @@
             if(isLast){
               log('分片合并中...');
               axios.post('/index/mergeChunk',{uuid:chunk.name,mType:mType}).then((res)=>{
-                console.log(res);                
                 if(res.data.errno == 0){
                   log('上传成功');
                 }

@@ -1,7 +1,9 @@
 const Base = require('./base.js');
 const path = require('path');
+const child_process = require('child_process');
 const fs = require('fs');
 const rename = think.promisify(fs.rename, fs);
+
 module.exports = class extends Base {
   indexAction() {
     return this.display();
@@ -11,7 +13,7 @@ module.exports = class extends Base {
     const file = this.file('file');
     if(file) {
       try{
-        const filePath = path.join(think.ROOT_PATH, `runtime/upload/${Date.now()}${path.extname(file.name)}`);
+        const filePath = path.join(think.ROOT_PATH, `runtime/upload/${think.uuid()}${path.extname(file.name)}`);
         think.mkdir(path.dirname(filePath));
         await rename(file.path, filePath);
         return this.success();
@@ -33,6 +35,7 @@ module.exports = class extends Base {
         await rename(file.path, filePath);    
         return this.success(filePath);
       }catch(e){
+        console.log(e);
         return this.fail();
       }
     }
@@ -45,7 +48,7 @@ module.exports = class extends Base {
     }
     try{
       const chunkDir = path.join(think.ROOT_PATH, `runtime/upload/${uuid}/`);
-      const desPath = path.join(think.ROOT_PATH, `runtime/upload/${Date.now()}.${mType}`);
+      const desPath = path.join(think.ROOT_PATH, `runtime/upload/${think.uuid()}.${mType}`);
       let fileList = [];
       // 遍历分片文件
       fs.readdirSync(chunkDir).forEach(file => {
@@ -57,10 +60,13 @@ module.exports = class extends Base {
         fs.appendFileSync(desPath, fs.readFileSync(fileList[i]));
       }
 
+      //删除分片文件夹
       child_process.exec(['rm', '-rf', chunkDir].join(' '));
 
       return this.success();
+
     }catch(e){
+      console.log(e);
       return this.fail();
     }
   }
