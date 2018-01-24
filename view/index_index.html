@@ -19,11 +19,11 @@
   <label>多文件上传：</label>
   <input id="multiUpload" type="file" multiple>
   <br>
-  <label>压缩图片上传：</label>
+  <label>压缩图片上传+预览：</label>
   <input id="compressUpload" type="file">
   <br>
   <label>分片上传：</label>
-  <input type="file">
+  <input id="chunkUpload" type="file">
   <br>
   <p style="color:red;" id="log">等待上传...</p>
   <script src="//lib.baomitu.com/axios/0.17.1/axios.min.js"></script>
@@ -53,8 +53,7 @@
       compress({
         file,
         quality: 0.01,
-        width: 200,
-        callback: function (file,img) {
+        callback: function (file, img) {
           log('上传中...')
           upload(file);
           document.body.appendChild(img)
@@ -62,6 +61,14 @@
       })
     })
 
+    // 分片上传
+    document.querySelectorAll('#chunkUpload')[0].addEventListener('change', function (e) {
+      var fileList = e.target.files;
+      var file = fileList[0];
+      chunkUpload(file);
+    })
+
+    // 上传
     function upload(file) {
       log('图片上传中...');
       const formData = new FormData();
@@ -73,8 +80,9 @@
       });
     }
 
+    // 压缩图片
     function compress(options) {
-      var { file, quality, width, height, callback } = options;
+      var { file, quality, callback } = options;
       var reader = new FileReader();
       var canvas = document.createElement('canvas');
       var ctx = canvas.getContext('2d');
@@ -89,8 +97,7 @@
           var newImageData = canvas.toDataURL(mType, quality);
           var newImg = new Image();
           newImg.src = newImageData;
-          if (width) newImg.width = width;
-          if (height) newImg.height = height;
+
           if (callback) {
             var base64data = newImg.src.replace(`data:${mType};base64,`, "");
             var bs = atob(base64data);
@@ -101,14 +108,65 @@
             }
             var blob = new Blob([ba], { type: mType });
             blob.name = `${Date.now()}.${mType.split('\/')[1]}`;
-            callback(blob,newImg);
+            callback(blob, newImg);
           }
         }
         img.src = event.target.result;
       }
       reader.readAsDataURL(file);
     }
+    
+    // 分片
+    function chunkUpload(file) {
+      var mType = file.type.split('\/')[1];
+      // 生成guid
+      function guid() {
+        function s4() {
+          return Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16)
+            .substring(1);
+        }
+        return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+          s4() + '-' + s4() + s4() + s4();
+      }
 
+      // 上传
+      function fn(chunk,index,isLast){
+        const formData = new FormData();
+        formData.append('file', chunk, chunk.name);
+        formData.append('order',index)
+        axios.post('/index/chunkUpload', formData).then((res) => {
+          if (res.data.errno == 0) {
+            if(isLast){
+              log('分片合并中...');
+              axios.post('/index/mergeChunk',{uuid:chunk.name,mType:mType}).then((res)=>{
+                console.log(res);                
+                if(res.data.errno == 0){
+                  log('上传成功');
+                }
+              })
+            }
+          }
+        });
+      }
+
+      log('分片上传中...');
+
+      // 500k每片
+      var chunkSize = 500 * 1024;
+      var chunkCount = Math.ceil(file.size / chunkSize);
+      var uuid = guid();
+      for (var i = 0; i < chunkCount; i++) {
+        var start = i * chunkSize;
+        var end = Math.min(file.size, start + chunkSize);
+        var chunk = file.slice(start,end);
+        chunk.name = uuid;
+        fn(chunk, i, i === chunkCount - 1);
+      }
+
+    }
+
+    // log
     function log(info) {
       document.querySelectorAll('#log')[0].textContent = info;
     }
